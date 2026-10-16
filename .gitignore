@@ -14,3 +14,6 @@ yarn-error.log*
 Thumbs.db
 .tools/
 scratch/
+CECMS.zip
+out.txt
+err.txt
