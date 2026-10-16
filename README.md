@@ -73,7 +73,7 @@ CECMS/
 *Note: Frontend setup instructions will be added once frontend integration is complete.*
 
 ## Collaborators
-Suryaa
+
 
 1. **Diya S. Kamath** — [@diyaskamath](https://github.com/diyaskamath)
 2. **[Member 2 Name]** — [@Sanmathi19](https://github.com/Sanmathi19)
