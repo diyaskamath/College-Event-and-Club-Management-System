@@ -78,9 +78,4 @@ CECMS/
 2. **[Member 2 Name]** — [GitHub Username](https://github.com/)
 3. **[Member 3 Name]** — [GitHub Username](https://github.com/)
 
-*Collaborators can replace the placeholders with their names and GitHub usernames.*
-
-## Project Status
-
-The backend is available in the repository, and frontend development and integration are in progress.
 
