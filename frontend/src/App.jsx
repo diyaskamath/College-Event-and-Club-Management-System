@@ -13,6 +13,8 @@ import ClubsPage from './pages/ClubsPage';
 import ClubDetailPage from './pages/ClubDetailPage';
 import EventsPage from './pages/EventsPage';
 import EventDetailPage from './pages/EventDetailPage';
+import CampusLifePage from './pages/CampusLifePage';
+import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OtpVerificationPage from './pages/OtpVerificationPage';
@@ -37,6 +39,8 @@ export default function App() {
                   <Route path="/clubs/:idOrSlug" element={<ClubDetailPage />} />
                   <Route path="/events" element={<EventsPage />} />
                   <Route path="/events/:idOrSlug" element={<EventDetailPage />} />
+                  <Route path="/campus-life" element={<CampusLifePage />} />
+                  <Route path="/about" element={<AboutPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/verify-otp" element={<OtpVerificationPage />} />

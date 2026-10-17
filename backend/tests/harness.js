@@ -6,6 +6,8 @@
  *
  *   TEST_DB_HOST / TEST_DB_PORT / TEST_DB_USER / TEST_DB_PASSWORD / TEST_DB_NAME  (fall back to DB_*)
  */
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 process.env.NODE_ENV = 'test';
 process.env.DB_HOST = process.env.TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1';
 process.env.DB_PORT = process.env.TEST_DB_PORT || process.env.DB_PORT || '3306';
@@ -14,7 +16,6 @@ process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD || process.env.DB_PASSWOR
 process.env.DB_NAME = process.env.TEST_DB_NAME || 'cecms_test';
 process.env.JWT_SECRET = 'test-secret-test-secret-test-secret-test-secret';
 
-const path = require('path');
 const { execFileSync } = require('child_process');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');

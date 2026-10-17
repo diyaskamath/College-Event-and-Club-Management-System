@@ -1,499 +1,463 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { useNotification } from '../context/NotificationContext';
-import Badge from '../components/Badge';
-import Modal from '../components/Modal';
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Building,
-  Users,
-  CheckCircle,
-  AlertCircle,
-  Bookmark,
-  Share2,
-  ArrowLeft,
-  Sparkles,
-  UserCheck,
-  Send,
-  FileText,
-  Star,
-} from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, User, Music, Sparkles, Info, Flame, Calendar, Award } from 'lucide-react';
 
 export default function EventDetailPage() {
   const { idOrSlug } = useParams();
-  const { user, isAuthenticated, isStudent, isCoordinator, isAdmin } = useAuth();
-  const { showToast } = useNotification();
+  const slug = (idOrSlug || '').toLowerCase();
+  
+  const isDussera = slug.includes('dussera') || slug.includes('dussehra') || slug.includes('navaratri');
+  const isDiwali = slug.includes('diwali') || slug.includes('deepavali');
 
-  const [event, setEvent] = useState(null);
-  const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  // Modals for Staff (Registrations, Attendance, Report)
-  const [regModalOpen, setRegModalOpen] = useState(false);
-  const [registrations, setRegistrations] = useState([]);
-  const [loadingRegs, setLoadingRegs] = useState(false);
-
-  const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
-  const [attendanceList, setAttendanceList] = useState([]);
-
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
-  const [feedbackRating, setFeedbackRating] = useState(5);
-  const [feedbackComment, setFeedbackComment] = useState('');
-
-  const loadEvent = useCallback(async () => {
-    try {
-      const data = await api.get(`/events/${idOrSlug}`);
-      setEvent(data.event);
-      setAnnouncements(data.announcements || []);
-      setSaved(!!data.event?.user_saved);
-    } catch (err) {
-      showToast(err.message || 'Failed to load event details', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [idOrSlug, showToast]);
-
-  useEffect(() => {
-    loadEvent();
-  }, [loadEvent]);
-
-  const handleRegister = async () => {
-    if (!isAuthenticated) {
-      showToast('Please sign in with your student account to register', 'info');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      const res = await api.post(`/events/${event.id}/register`);
-      showToast(res.message || 'Successfully registered for this event!', 'success');
-      loadEvent();
-    } catch (err) {
-      showToast(err.message || 'Registration failed', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCancelRegistration = async () => {
-    if (!window.confirm('Are you sure you want to cancel your registration?')) return;
-    setActionLoading(true);
-    try {
-      await api.delete(`/events/${event.id}/register`);
-      showToast('Registration cancelled', 'info');
-      loadEvent();
-    } catch (err) {
-      showToast(err.message || 'Failed to cancel registration', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleToggleSave = async () => {
-    if (!isAuthenticated) {
-      showToast('Please sign in to save events', 'info');
-      return;
-    }
-    try {
-      if (saved) {
-        await api.delete(`/events/${event.id}/save`);
-        setSaved(false);
-        showToast('Removed from saved events', 'info');
-      } else {
-        await api.post(`/events/${event.id}/save`);
-        setSaved(true);
-        showToast('Saved to your bookmarks', 'success');
-      }
-    } catch (err) {
-      showToast(err.message || 'Action failed', 'error');
-    }
-  };
-
-  const handleFeedbackSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post(`/events/${event.id}/feedback`, {
-        rating: feedbackRating,
-        comment: feedbackComment,
-      });
-      showToast('Thank you for submitting event feedback!', 'success');
-      setFeedbackModalOpen(false);
-      setFeedbackComment('');
-    } catch (err) {
-      showToast(err.message || 'Failed to submit feedback', 'error');
-    }
-  };
-
-  const openRegistrationsModal = async () => {
-    setRegModalOpen(true);
-    setLoadingRegs(true);
-    try {
-      const data = await api.get(`/events/${event.id}/registrations`);
-      setRegistrations(data.registrations || []);
-    } catch (err) {
-      showToast(err.message || 'Failed to load registrations', 'error');
-    } finally {
-      setLoadingRegs(false);
-    }
-  };
-
-  const handleReviewReg = async (regId, status) => {
-    try {
-      await api.patch(`/events/${event.id}/registrations/${regId}`, { status });
-      showToast(`Registration marked as ${status}`, 'success');
-      setRegistrations((prev) =>
-        prev.map((r) => (r.id === regId ? { ...r, status } : r))
-      );
-    } catch (err) {
-      showToast(err.message || 'Failed to update registration status', 'error');
-    }
-  };
-
-  if (loading) {
-    return <div className="container" style={{ padding: '5rem 0', textAlign: 'center', color: '#94A3B8' }}>Loading event details...</div>;
-  }
-
-  if (!event) {
+  // ==================== DUSSERA THEME ====================
+  // Dussera Theme: Cream/beige background, subtle mandala borders. 
+  // Details: AB2 Ground, 9 AM Puja Timings, Sanmathi (Student), Dr. Abhishek (ECE), 1 PM Lunch in Pandhal for all depts.
+  if (isDussera) {
     return (
-      <div className="container" style={{ padding: '5rem 0', textAlign: 'center' }}>
-        <h2>Event not found</h2>
-        <Link to="/events" className="btn btn-secondary" style={{ marginTop: '1rem' }}>
-          Back to Events
+      <div style={{ 
+        minHeight: '100vh', 
+        /* Cream / Beige traditional sacred background */
+        background: 'linear-gradient(135deg, #fefae0 0%, #faedcd 50%, #fef8e8 100%)',
+        position: 'relative', 
+        zIndex: 100, 
+        overflowX: 'hidden', 
+        paddingTop: '6rem', 
+        paddingBottom: '4rem',
+        fontFamily: 'Lato, sans-serif' 
+      }}>
+        
+        {/* Subtle Mandala Borders & Sacred Patterns */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none', overflow: 'hidden', opacity: 0.22 }}>
+          {/* Circular Mandala rings */}
+          <div style={{ position: 'absolute', top: '-120px', left: '-120px', width: '500px', height: '500px', borderRadius: '50%', border: '16px double #b45309' }} />
+          <div style={{ position: 'absolute', top: '-80px', left: '-80px', width: '420px', height: '420px', borderRadius: '50%', border: '8px dashed #d4af37' }} />
+          
+          <div style={{ position: 'absolute', bottom: '-150px', right: '-150px', width: '650px', height: '650px', borderRadius: '50%', border: '20px double #b45309' }} />
+          <div style={{ position: 'absolute', bottom: '-100px', right: '-100px', width: '550px', height: '550px', borderRadius: '50%', border: '10px dashed #d4af37' }} />
+
+          {/* Floating sacred flower icons */}
+          <span style={{ position: 'absolute', top: '20%', right: '10%', fontSize: '3rem' }}>🌺</span>
+          <span style={{ position: 'absolute', bottom: '25%', left: '8%', fontSize: '3.5rem' }}>🪷</span>
+          <span style={{ position: 'absolute', top: '65%', right: '15%', fontSize: '2.8rem' }}>✨</span>
+        </div>
+
+        {/* Back to Events Button */}
+        <Link 
+          to="/events" 
+          style={{ 
+            position: 'fixed', 
+            top: '5.5rem', 
+            left: '3.5rem', 
+            color: '#ffffff', 
+            textDecoration: 'none', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem', 
+            fontWeight: 'bold', 
+            zIndex: 30, 
+            fontFamily: 'Cinzel, serif', 
+            backgroundColor: '#881337', 
+            padding: '0.7rem 1.6rem', 
+            border: '2px solid #ffffff',
+            boxShadow: '0 4px 15px rgba(136, 19, 55, 0.3)'
+          }}
+        >
+          <ArrowLeft size={18} /> Back to Events
         </Link>
+
+        {/* Main Content Area */}
+        <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center', padding: '2rem 1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
+          
+          <div style={{ fontSize: '4.5rem', marginBottom: '0.5rem' }}>🌺</div>
+          
+          <h1 style={{ 
+            fontFamily: 'Cinzel, serif', 
+            fontSize: '4.2rem', 
+            margin: 0, 
+            color: '#881337', 
+            textShadow: '2px 2px 4px rgba(0,0,0,0.1)', 
+            letterSpacing: '0.08em',
+            lineHeight: '1.15'
+          }}>
+            DUSSERA CULTURAL NIGHT
+          </h1>
+          
+          <h2 style={{ 
+            fontFamily: 'Cinzel, serif', 
+            fontSize: '1.8rem', 
+            margin: '0.8rem 0 0 0', 
+            color: '#b45309',
+            letterSpacing: '1px'
+          }}>
+            Celebrating the Victory of Light & Righteousness
+          </h2>
+
+          <p style={{
+            fontSize: '1.2rem',
+            color: '#4a2c1a',
+            maxWidth: '780px',
+            marginTop: '1.5rem',
+            lineHeight: '1.7',
+            fontWeight: '500'
+          }}>
+            Join the entire Amrita Vishwa Vidyapeetham fraternity at the AB2 Ground for the auspicious Ayudha Puja, ceremonial traditional processions, classical music recitals, and our beloved campus-wide Pandhal banquet.
+          </p>
+
+          {/* 4 Core Requirement Detail Cards */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+            gap: '1.8rem', 
+            width: '100%', 
+            marginTop: '3.5rem' 
+          }}>
+            
+            {/* 1. Venue: AB2 Ground */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <MapPin size={42} color="#881337" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Venue
+              </h3>
+              <p style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#881337', margin: 0 }}>
+                AB2 Ground
+              </p>
+              <span style={{ fontSize: '0.85rem', color: '#78350f', marginTop: '0.4rem' }}>Main Campus Arena</span>
+            </div>
+
+            {/* 2. Timing: 9 AM Puja Timings */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <Clock size={42} color="#881337" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Puja Timings
+              </h3>
+              <p style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#881337', margin: 0 }}>
+                9:00 AM Onwards
+              </p>
+              <span style={{ fontSize: '0.85rem', color: '#78350f', marginTop: '0.4rem' }}>Morning Ayudha Puja</span>
+            </div>
+
+            {/* 3. Coordinators: Sanmathi (Student), Dr. Abhishek (ECE) */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <User size={42} color="#881337" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Coordinators
+              </h3>
+              <p style={{ fontSize: '1.1rem', color: '#2b1b10', margin: '0 0 0.3rem 0' }}>
+                <strong>Student:</strong> <span style={{ color: '#881337' }}>Sanmathi</span>
+              </p>
+              <p style={{ fontSize: '1.1rem', color: '#2b1b10', margin: 0 }}>
+                <strong>Faculty:</strong> <span style={{ color: '#881337' }}>Dr. Abhishek (ECE)</span>
+              </p>
+            </div>
+
+            {/* 4. Special Note: 1 PM Lunch in Pandhal for all depts */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <Info size={42} color="#881337" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Special Feast Note
+              </h3>
+              <p style={{ fontSize: '1.15rem', fontWeight: 'bold', color: '#881337', margin: 0 }}>
+                1:00 PM Grand Lunch
+              </p>
+              <span style={{ fontSize: '0.9rem', color: '#78350f', marginTop: '0.4rem', fontWeight: '600' }}>
+                Served in Pandhal for all departments
+              </span>
+            </div>
+
+          </div>
+
+          <div style={{
+            marginTop: '3.5rem',
+            padding: '1.2rem 2.5rem',
+            backgroundColor: '#881337',
+            color: '#ffffff',
+            fontFamily: 'Cinzel, serif',
+            fontWeight: 'bold',
+            fontSize: '1.1rem',
+            letterSpacing: '1px',
+            border: '2px solid #d4af37',
+            boxShadow: '0 6px 20px rgba(136, 19, 55, 0.3)'
+          }}>
+            🙏 All students and faculty are cordially invited to seek divine blessings
+          </div>
+
+        </div>
       </div>
     );
   }
 
-  const isFestival = event.kind === 'festival';
-  const startsAt = event.starts_at ? new Date(event.starts_at) : null;
-  const endsAt = event.ends_at ? new Date(event.ends_at) : null;
-  const deadline = event.registration_deadline ? new Date(event.registration_deadline) : null;
-  const isStaff = isAdmin || isCoordinator;
-  const userRegStatus = event.user_registration_status;
+  // ==================== DIWALI THEME (LIGHT & MAGICAL) ====================
+  // Diwali Theme: Magical light sunset gradient. Floating hanging diyas (🪔). 
+  // Details: 5-8 PM Crackers, Pandhal Puja, Diya S Kamath (Student), Dr. Manikandan (ECE), 9-11 PM Dance/Music.
+  if (isDiwali) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        /* Magical light sunset gradient */
+        background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 40%, #fbcfe8 80%, #fed7aa 100%)',
+        position: 'relative', 
+        zIndex: 100, 
+        overflowX: 'hidden', 
+        paddingTop: '6rem', 
+        paddingBottom: '4rem',
+        fontFamily: 'Lato, sans-serif' 
+      }}>
+        
+        {/* Floating Hanging Diyas (🪔) & Sunset Shimmer */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none', overflow: 'hidden' }}>
+          
+          {/* Hanging Diya string visual indicators */}
+          <div style={{ position: 'absolute', top: 0, left: '12%', width: '1px', height: '120px', background: 'linear-gradient(to bottom, #b45309, #f59e0b)' }} />
+          <div className="floating-icon" style={{ position: 'absolute', top: '110px', left: 'calc(12% - 20px)', fontSize: '3rem', filter: 'drop-shadow(0 0 15px #f59e0b)' }}>
+            🪔
+          </div>
 
-  return (
-    <div style={{ padding: '2rem 0 4rem' }}>
-      <div className="container">
-        {/* Breadcrumb */}
-        <Link to="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1.5rem' }}>
-          <ArrowLeft size={16} />
-          <span>Back to All Events</span>
+          <div style={{ position: 'absolute', top: 0, left: '32%', width: '1px', height: '80px', background: 'linear-gradient(to bottom, #b45309, #f59e0b)' }} />
+          <div className="floating-icon" style={{ position: 'absolute', top: '70px', left: 'calc(32% - 20px)', fontSize: '3rem', filter: 'drop-shadow(0 0 15px #f59e0b)', animationDelay: '1s' }}>
+            🪔
+          </div>
+
+          <div style={{ position: 'absolute', top: 0, right: '28%', width: '1px', height: '140px', background: 'linear-gradient(to bottom, #b45309, #f59e0b)' }} />
+          <div className="floating-icon" style={{ position: 'absolute', top: '130px', right: 'calc(28% - 20px)', fontSize: '3.2rem', filter: 'drop-shadow(0 0 15px #f59e0b)', animationDelay: '1.8s' }}>
+            🪔
+          </div>
+
+          <div style={{ position: 'absolute', top: 0, right: '10%', width: '1px', height: '90px', background: 'linear-gradient(to bottom, #b45309, #f59e0b)' }} />
+          <div className="floating-icon" style={{ position: 'absolute', top: '80px', right: 'calc(10% - 20px)', fontSize: '3rem', filter: 'drop-shadow(0 0 15px #f59e0b)', animationDelay: '0.6s' }}>
+            🪔
+          </div>
+
+          {/* Sparkles */}
+          <span className="sparkle-icon" style={{ position: 'absolute', top: '40%', left: '6%', fontSize: '2.5rem' }}>✨</span>
+          <span className="sparkle-icon" style={{ position: 'absolute', top: '60%', right: '8%', fontSize: '3rem', animationDelay: '1.2s' }}>🎇</span>
+          <span className="sparkle-icon" style={{ position: 'absolute', bottom: '15%', left: '15%', fontSize: '3.2rem', animationDelay: '0.8s' }}>🎆</span>
+
+          {/* Glowing Rangoli Circles at the bottom */}
+          <div style={{ position: 'absolute', bottom: '-80px', left: '50%', transform: 'translateX(-50%)', width: '600px', height: '300px', background: 'radial-gradient(ellipse at center, rgba(245, 158, 11, 0.25) 0%, transparent 70%)', borderRadius: '50%' }} />
+          <div style={{ position: 'absolute', bottom: '-40px', left: '50%', transform: 'translateX(-50%)', width: '420px', height: '210px', border: '3px solid rgba(245, 158, 11, 0.5)', borderRadius: '50%' }} />
+        </div>
+
+        {/* Back to Events Button */}
+        <Link 
+          to="/events" 
+          style={{ 
+            position: 'fixed', 
+            top: '5.5rem', 
+            left: '3.5rem', 
+            color: '#ffffff', 
+            textDecoration: 'none', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem', 
+            fontWeight: 'bold', 
+            zIndex: 30, 
+            fontFamily: 'Cinzel, serif', 
+            backgroundColor: '#b45309', 
+            padding: '0.7rem 1.6rem', 
+            border: '2px solid #ffffff',
+            boxShadow: '0 4px 15px rgba(180, 83, 9, 0.3)'
+          }}
+        >
+          <ArrowLeft size={18} /> Back to Events
         </Link>
 
-        {/* Demo Data Notice */}
-        <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#92400E' }}>
-          <AlertCircle size={18} style={{ flexShrink: 0 }} />
-          <span>
-            <strong>Demonstration Event:</strong> All dates, academic blocks, venues, and registration capacities shown below are sample placeholder details for project evaluation.
-          </span>
-        </div>
+        {/* Main Content Area */}
+        <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center', padding: '2rem 1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
+          
+          <div style={{ fontSize: '4.5rem', marginBottom: '0.5rem' }}>🎆</div>
+          
+          <h1 style={{ 
+            fontFamily: 'Cinzel, serif', 
+            fontSize: '4.2rem', 
+            margin: 0, 
+            color: '#881337', 
+            textShadow: '2px 2px 4px rgba(0,0,0,0.1)', 
+            letterSpacing: '0.08em',
+            lineHeight: '1.15'
+          }}>
+            DIWALI LIGHTS & RANGOLI
+          </h1>
+          
+          <h2 style={{ 
+            fontFamily: 'Cinzel, serif', 
+            fontSize: '1.8rem', 
+            margin: '0.8rem 0 0 0', 
+            color: '#b45309',
+            letterSpacing: '1px'
+          }}>
+            The Festival of Illumination, Harmony & Joy
+          </h2>
 
-        {/* Main Event Header Card */}
-        <div className="card" style={{ padding: '2.5rem', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
-            <div style={{ flex: 1, minWidth: '300px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                {isFestival ? (
-                  <Badge variant="festival" icon={Sparkles}>Dedicated Festival</Badge>
-                ) : (
-                  <Badge variant="primary">{event.category || 'Regular Event'}</Badge>
-                )}
-                {event.event_type && (
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', background: '#F1F5F9', padding: '0.2rem 0.55rem', borderRadius: '4px' }}>
-                    {event.event_type}
-                  </span>
-                )}
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#15803D', background: '#DCFCE7', padding: '0.2rem 0.55rem', borderRadius: '4px', textTransform: 'capitalize' }}>
-                  {event.status || 'Published'}
-                </span>
-              </div>
+          <p style={{
+            fontSize: '1.2rem',
+            color: '#4a2c1a',
+            maxWidth: '780px',
+            marginTop: '1.5rem',
+            lineHeight: '1.7',
+            fontWeight: '500'
+          }}>
+            Illuminate the evening sky with Amrita's grand Deepavali festival. Featuring mesmerizing rangoli displays, ceremonial twilight puja, community fireworks, and electric student musical recitals.
+          </p>
 
-              <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', fontWeight: 700, color: '#0F172A', marginBottom: '1rem', lineHeight: 1.25 }}>
-                {event.title}
-              </h1>
-
-              <p style={{ fontSize: '1.05rem', color: '#475569', lineHeight: 1.6, marginBottom: '2rem' }}>
-                {event.description}
+          {/* 4 Core Requirement Detail Cards */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+            gap: '1.8rem', 
+            width: '100%', 
+            marginTop: '3.5rem' 
+          }}>
+            
+            {/* 1. Crackers Timing: 5-8 PM Crackers */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <Flame size={42} color="#b45309" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Crackers Timing
+              </h3>
+              <p style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#b45309', margin: 0 }}>
+                5:00 PM – 8:00 PM
               </p>
-
-              {/* Metadata Key Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', padding: '1.25rem', background: '#F8FAFC', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-                    <Calendar size={15} color="var(--theme-primary)" />
-                    <span>Event Date</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B' }}>
-                    {startsAt ? startsAt.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-                    <Clock size={15} color="var(--theme-primary)" />
-                    <span>Time Slot</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B' }}>
-                    {startsAt ? startsAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'TBD'} &mdash; {endsAt ? endsAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-                    <Building size={15} color="#D97706" />
-                    <span>Academic Block / Building</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B' }}>
-                    {event.academic_block || 'Academic block placeholder'}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-                    <MapPin size={15} color="#D97706" />
-                    <span>Venue Location</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B' }}>
-                    {event.venue || 'Venue placeholder'}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-                    <Users size={15} color="var(--theme-primary)" />
-                    <span>Capacity / Registrations</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#1E293B' }}>
-                    {event.registered_count || 0} / {event.capacity || 'Open'} registered
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#64748B', fontSize: '0.8rem', marginBottom: '0.25rem' }}>
-                    <Clock size={15} color="#DC2626" />
-                    <span>Registration Deadline</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '0.925rem', color: '#DC2626' }}>
-                    {deadline ? deadline.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
-                  </div>
-                </div>
-              </div>
+              <span style={{ fontSize: '0.85rem', color: '#881337', marginTop: '0.4rem', fontWeight: 'bold' }}>
+                Designated Safe Arena
+              </span>
             </div>
 
-            {/* Sidebar Action Box */}
-            <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="card" style={{ padding: '1.5rem', background: '#F8FAFC' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Organized By</h3>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--theme-primary)', marginBottom: '0.5rem' }}>
-                  {event.club_name ? (
-                    <Link to={`/clubs/${event.club_id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>
-                      {event.club_name}
-                    </Link>
-                  ) : (
-                    event.organizer_name || 'Campus Cultural Committee'
-                  )}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
-                  Campus: <strong>{event.campus_name || 'Coimbatore'}</strong>
-                </div>
-
-                <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '1rem', paddingTop: '1rem' }}>
-                  {/* Student Registration Flow */}
-                  {userRegStatus ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#15803D', fontWeight: 700, fontSize: '0.9rem', background: '#DCFCE7', padding: '0.5rem', borderRadius: 'var(--radius-md)', justifyContent: 'center' }}>
-                        <CheckCircle size={16} />
-                        <span>Status: {userRegStatus}</span>
-                      </div>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={handleCancelRegistration}
-                        disabled={actionLoading}
-                        style={{ color: '#EF4444' }}
-                      >
-                        Cancel Registration
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="btn btn-primary"
-                      style={{ width: '100%' }}
-                      onClick={handleRegister}
-                      disabled={actionLoading}
-                    >
-                      <UserCheck size={18} />
-                      <span>Register for Event</span>
-                    </button>
-                  )}
-
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: '100%', marginTop: '0.5rem' }}
-                    onClick={handleToggleSave}
-                  >
-                    <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />
-                    <span>{saved ? 'Saved in Bookmarks' : 'Save Event'}</span>
-                  </button>
-
-                  {userRegStatus === 'attended' || userRegStatus === 'approved' ? (
-                    <button
-                      className="btn btn-outline btn-sm"
-                      style={{ width: '100%', marginTop: '0.5rem' }}
-                      onClick={() => setFeedbackModalOpen(true)}
-                    >
-                      <Star size={15} />
-                      <span>Submit Feedback</span>
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Staff controls */}
-              {isStaff && (
-                <div className="card" style={{ padding: '1.25rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem', color: '#334155' }}>
-                    Coordinator Tools
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary btn-sm" onClick={openRegistrationsModal}>
-                      <Users size={14} />
-                      <span>Review Registrations</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* 2. Puja Venue: Pandhal Puja */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <Sparkles size={42} color="#b45309" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Puja Venue
+              </h3>
+              <p style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#b45309', margin: 0 }}>
+                At Pandhal
+              </p>
+              <span style={{ fontSize: '0.85rem', color: '#881337', marginTop: '0.4rem', fontWeight: 'bold' }}>
+                Deepavali Deepam Lighting
+              </span>
             </div>
+
+            {/* 3. Coordinators: Diya S Kamath (Student), Dr. Manikandan (ECE) */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <User size={42} color="#b45309" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Coordinators
+              </h3>
+              <p style={{ fontSize: '1.1rem', color: '#2b1b10', margin: '0 0 0.3rem 0' }}>
+                <strong>Student:</strong> <span style={{ color: '#b45309' }}>Diya S Kamath</span>
+              </p>
+              <p style={{ fontSize: '1.1rem', color: '#2b1b10', margin: 0 }}>
+                <strong>Faculty:</strong> <span style={{ color: '#b45309' }}>Dr. Manikandan (ECE)</span>
+              </p>
+            </div>
+
+            {/* 4. Dance & Music: 9-11 PM Dance/Music */}
+            <div style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+              padding: '2.2rem 1.8rem', 
+              border: '2px solid #d4af37', 
+              boxShadow: '0 10px 25px rgba(180, 83, 9, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <Music size={42} color="#b45309" style={{ marginBottom: '1rem' }} />
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.4rem', margin: '0 0 0.5rem 0', color: '#2b1b10' }}>
+                Dance & Music
+              </h3>
+              <p style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#b45309', margin: 0 }}>
+                9:00 PM – 11:00 PM
+              </p>
+              <span style={{ fontSize: '0.85rem', color: '#881337', marginTop: '0.4rem', fontWeight: 'bold' }}>
+                Main Amphitheatre Stage
+              </span>
+            </div>
+
           </div>
+
+          <div style={{
+            marginTop: '3.5rem',
+            padding: '1.2rem 2.5rem',
+            backgroundColor: '#b45309',
+            color: '#ffffff',
+            fontFamily: 'Cinzel, serif',
+            fontWeight: 'bold',
+            fontSize: '1.1rem',
+            letterSpacing: '1px',
+            border: '2px solid #d4af37',
+            boxShadow: '0 6px 20px rgba(180, 83, 9, 0.3)'
+          }}>
+            ✨ Let's light up the campus together! Eco-friendly sparklers provided at Pandhal.
+          </div>
+
         </div>
-
-        {/* Event Announcements Section */}
-        {announcements.length > 0 && (
-          <div style={{ marginTop: '2rem' }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '1rem' }}>Event Announcements</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {announcements.map((a) => (
-                <div key={a.id} className="card" style={{ padding: '1.25rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0F172A', marginBottom: '0.25rem' }}>
-                    {a.title}
-                  </div>
-                  <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.5 }}>{a.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+    );
+  }
 
-      {/* Staff Review Registrations Modal */}
-      <Modal
-        isOpen={regModalOpen}
-        onClose={() => setRegModalOpen(false)}
-        title={`Registrations for ${event.title}`}
-        maxWidth="750px"
-      >
-        {loadingRegs ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>Loading registrations...</div>
-        ) : registrations.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>No registrations yet.</div>
-        ) : (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Amrita Email</th>
-                  <th>Status</th>
-                  <th>Registered At</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {registrations.map((r) => (
-                  <tr key={r.id}>
-                    <td style={{ fontWeight: 600 }}>{r.user_name}</td>
-                    <td>{r.user_email}</td>
-                    <td>
-                      <span className={`badge ${r.status === 'approved' ? 'badge-success' : r.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td style={{ color: '#64748B', fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleDateString()}</td>
-                    <td>
-                      {r.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '0.35rem' }}>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                            onClick={() => handleReviewReg(r.id, 'approved')}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#EF4444' }}
-                            onClick={() => handleReviewReg(r.id, 'rejected')}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Modal>
-
-      {/* Student Feedback Modal */}
-      <Modal
-        isOpen={feedbackModalOpen}
-        onClose={() => setFeedbackModalOpen(false)}
-        title="Submit Event Feedback"
-      >
-        <form onSubmit={handleFeedbackSubmit}>
-          <div className="form-group">
-            <label className="form-label">Rating (1 to 5 Stars)</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  type="button"
-                  key={star}
-                  onClick={() => setFeedbackRating(star)}
-                  style={{ color: star <= feedbackRating ? '#F59E0B' : '#CBD5E1', padding: '0.25rem' }}
-                >
-                  <Star size={24} fill={star <= feedbackRating ? 'currentColor' : 'none'} />
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Comments & Experience</label>
-            <textarea
-              required
-              rows={3}
-              className="form-textarea"
-              value={feedbackComment}
-              onChange={(e) => setFeedbackComment(e.target.value)}
-              placeholder="What did you learn or enjoy most about this session?"
-            />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setFeedbackModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Submit Feedback
-            </button>
-          </div>
-        </form>
-      </Modal>
+  // Fallback if not matched
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fdfbf7', color: '#1a1008', flexDirection: 'column', padding: '2rem' }}>
+      <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: '3rem', color: '#881337' }}>Event Not Found</h1>
+      <p style={{ fontSize: '1.2rem', color: '#4a2c1a' }}>Unable to locate event with slug: <strong>{slug}</strong></p>
+      <Link to="/events" style={{ color: '#ffffff', backgroundColor: '#881337', marginTop: '2rem', textDecoration: 'none', fontSize: '1.1rem', fontWeight: 'bold', padding: '0.8rem 2rem', border: '2px solid #d4af37' }}>
+        ← Back to Events Calendar
+      </Link>
     </div>
   );
 }

@@ -1,236 +1,306 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
-import ClubCard from '../components/ClubCard';
-import Modal from '../components/Modal';
-import { useAuth } from '../context/AuthContext';
-import { useNotification } from '../context/NotificationContext';
-import { Search, Filter, Plus, Users, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, BookOpen, Film, Trophy, Cpu, ArrowLeft, Sparkles, ChevronRight } from 'lucide-react';
+
+const backupClubs = [
+  {
+    id: 1,
+    name: 'The Book Club',
+    slug: 'book-club',
+    tagline: 'Literature, Philosophy & Creative Writing',
+    gradient: 'linear-gradient(135deg, #881337 0%, #E11D48 100%)',
+    icon: BookOpen
+  },
+  {
+    id: 2,
+    name: 'Film & Cinema Club',
+    slug: 'film-club',
+    tagline: 'Cinematography, Direction & Screenplays',
+    gradient: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
+    icon: Film
+  },
+  {
+    id: 3,
+    name: 'Sports Club',
+    slug: 'sports-club',
+    tagline: 'Athletics, Tournaments & Unstoppable Spirit',
+    gradient: 'linear-gradient(135deg, #B45309 0%, #F59E0B 100%)',
+    icon: Trophy
+  },
+  {
+    id: 4,
+    name: 'IoT & Robotics Club',
+    slug: 'iot-club',
+    tagline: 'Hardware, Automation & Intelligent Systems',
+    gradient: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+    icon: Cpu
+  },
+];
 
 export default function ClubsPage() {
-  const { isAuthenticated, user } = useAuth();
-  const { showToast } = useNotification();
-
-  const [clubs, setClubs] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-
-  // Club Request Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [reqForm, setReqForm] = useState({ name: '', category: '', description: '', purpose: '' });
-  const [submitting, setSubmitting] = useState(false);
+  const [clubs, setClubs] = useState(backupClubs);
+  const [filteredClubs, setFilteredClubs] = useState(backupClubs);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     async function loadClubs() {
       try {
-        const [clubsRes, catRes] = await Promise.all([
-          api.get('/clubs'),
-          api.get('/clubs/categories'),
-        ]);
-        setClubs(clubsRes.clubs || []);
-        setCategories(catRes.categories || []);
+        const data = await api.get('/clubs?limit=20');
+        const items = data.items || data.clubs || [];
+        if (items.length > 0) {
+          // Map backend clubs to the 4 core clubs
+          const matched = backupClubs.map(b => {
+            const found = items.find(c => 
+              c.slug === b.slug || 
+              c.name.toLowerCase().includes(b.slug.split('-')[0])
+            );
+            return found ? { ...b, id: found.id, name: found.name || b.name } : b;
+          });
+          setClubs(matched);
+          setFilteredClubs(matched);
+        }
       } catch (err) {
-        showToast('Failed to load clubs directory', 'error');
-      } finally {
-        setLoading(false);
+        console.log('Using backup club data.');
       }
     }
     loadClubs();
-  }, [showToast]);
+  }, []);
 
-  const filteredClubs = clubs.filter((c) => {
-    const matchesSearch =
-      !search ||
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.description && c.description.toLowerCase().includes(search.toLowerCase()));
-    const matchesCat = !selectedCategory || c.category === selectedCategory;
-    return matchesSearch && matchesCat;
-  });
-
-  const handleRequestSubmit = async (e) => {
-    e.preventDefault();
-    if (!reqForm.name || !reqForm.category || !reqForm.description) {
-      showToast('Please fill out all required fields', 'warning');
-      return;
+  useEffect(() => {
+    if (searchTerm) {
+      const result = clubs.filter(club => 
+        club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        club.tagline.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredClubs(result);
+    } else {
+      setFilteredClubs(clubs);
     }
-    setSubmitting(true);
-    try {
-      await api.post('/club-requests', reqForm);
-      showToast('Club creation request submitted for Admin review!', 'success');
-      setIsModalOpen(false);
-      setReqForm({ name: '', category: '', description: '', purpose: '' });
-    } catch (err) {
-      showToast(err.message || 'Failed to submit request', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  }, [searchTerm, clubs]);
 
   return (
-    <div style={{ padding: '2.5rem 0 4rem' }}>
-      <div className="container">
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--theme-primary)', fontWeight: 700, fontSize: '0.825rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
-              <Users size={16} />
-              <span>Campus Communities</span>
-            </div>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', fontWeight: 700, color: '#0F172A' }}>
-              Clubs & Societies Directory
-            </h1>
-            <p style={{ color: '#64748B', fontSize: '1rem', marginTop: '0.35rem' }}>
-              Showing exactly the 8 student organizations approved for Amrita university campus life.
-            </p>
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      position: 'relative',
+      fontFamily: 'Lato, sans-serif',
+      padding: '7rem 4rem 4rem 4rem',
+      /* Energetic, warm college gradient */
+      background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 30%, #fef3c7 70%, #ffedd5 100%)',
+      overflowX: 'hidden'
+    }}>
+      
+      {/* Optional warm college image overlay if available */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+        backgroundImage: "url('/clubs-bg.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        opacity: 0.18,
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
 
-          <button
-            className="btn btn-outline"
-            onClick={() => {
-              if (!isAuthenticated) {
-                showToast('Please sign in to submit a club proposal', 'info');
-              } else {
-                setIsModalOpen(true);
-              }
-            }}
-          >
-            <Plus size={16} />
-            <span>Propose New Club</span>
-          </button>
-        </div>
-
-        {/* Search & Category Filter Bar */}
-        <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-              <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-              <input
-                type="text"
-                placeholder="Search clubs by name or keywords..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '2.25rem' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <Filter size={16} color="#64748B" />
-              <button
-                className={`btn btn-sm ${!selectedCategory ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setSelectedCategory('')}
-              >
-                All Categories
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  className={`btn btn-sm ${selectedCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Clubs Grid */}
-        {loading ? (
-          <div style={{ padding: '4rem', textAlign: 'center', color: '#94A3B8' }}>Loading clubs directory...</div>
-        ) : filteredClubs.length === 0 ? (
-          <div className="card" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-            <AlertCircle size={40} color="#94A3B8" style={{ margin: '0 auto 1rem' }} />
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.5rem' }}>No clubs found</h3>
-            <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Try adjusting your search criteria or clear your category filter.
-            </p>
-            <button className="btn btn-secondary btn-sm" onClick={() => { setSearch(''); setSelectedCategory(''); }}>
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid-4">
-            {filteredClubs.map((club) => (
-              <ClubCard key={club.id} club={club} />
-            ))}
-          </div>
-        )}
+      {/* Floating Sparkles & Badges */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
+        <span style={{ position: 'absolute', top: '15%', left: '4%', fontSize: '2.5rem', opacity: 0.4 }}>✨</span>
+        <span style={{ position: 'absolute', top: '25%', right: '5%', fontSize: '3rem', opacity: 0.3 }}>🎓</span>
+        <span style={{ position: 'absolute', bottom: '15%', left: '8%', fontSize: '2.5rem', opacity: 0.4 }}>🌟</span>
+        <span style={{ position: 'absolute', bottom: '25%', right: '10%', fontSize: '2.8rem', opacity: 0.3 }}>⚡</span>
       </div>
 
-      {/* Propose New Club Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Propose a New Campus Club">
-        <form onSubmit={handleRequestSubmit}>
-          <p style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '1.25rem' }}>
-            Submitted proposals are reviewed by University Administrators. If approved, the new club will be activated in the catalog.
-          </p>
+      {/* Content Wrapper */}
+      <div style={{ position: 'relative', zIndex: 10, maxWidth: '1240px', margin: '0 auto' }}>
+        
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+          
+          <Link to="/" style={{ 
+            backgroundColor: '#1a1008', 
+            color: '#ffffff', 
+            padding: '0.8rem 1.8rem', 
+            borderRadius: '0px', 
+            textDecoration: 'none', 
+            fontSize: '1rem', 
+            fontWeight: 'bold',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+            border: '2px solid #d4af37',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontFamily: 'Cinzel, serif',
+            transition: 'all 0.2s ease'
+          }}>
+            <ArrowLeft size={18} /> Back to Home
+          </Link>
+          
+          <div style={{ textAlign: 'right' }}>
+            <h1 style={{ 
+              fontFamily: 'Cinzel, serif', 
+              fontSize: '2.8rem', 
+              margin: 0, 
+              color: '#1a1008', 
+              letterSpacing: '1px',
+              textShadow: '1px 1px 3px rgba(255,255,255,0.8)' 
+            }}>
+              Campus Guilds & Clubs
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', color: '#b45309', fontWeight: 'bold', fontSize: '0.85rem', marginTop: '0.3rem' }}>
+              <Sparkles size={16} /> OFFICIAL AMRITA COIMBATORE CLUBS
+            </div>
+          </div>
+        </div>
 
-          <div className="form-group">
-            <label className="form-label">Proposed Club Name *</label>
-            <input
-              type="text"
-              required
-              className="form-input"
-              value={reqForm.name}
-              onChange={(e) => setReqForm({ ...reqForm, name: e.target.value })}
-              placeholder="e.g., Artificial Intelligence & ML Society"
+        {/* Centered, Stretched Search Bar */}
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '4rem' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '820px' }}>
+            <Search size={24} style={{ position: 'absolute', left: '22px', top: '50%', transform: 'translateY(-50%)', color: '#1a1008' }} />
+            <input 
+              type="text" 
+              placeholder="Search for a club or domain to join (e.g. Book, Film, IoT, Sports)..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ 
+                width: '100%', 
+                padding: '1.25rem 1.25rem 1.25rem 3.8rem', 
+                borderRadius: '0px', 
+                border: '2px solid #1a1008', 
+                backgroundColor: 'rgba(255, 255, 255, 0.98)', 
+                color: '#1a1008', 
+                fontSize: '1.15rem', 
+                fontWeight: 'bold', 
+                outline: 'none',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                boxSizing: 'border-box'
+              }}
             />
           </div>
+        </div>
 
-          <div className="form-group">
-            <label className="form-label">Category *</label>
-            <select
-              required
-              className="form-select"
-              value={reqForm.category}
-              onChange={(e) => setReqForm({ ...reqForm, category: e.target.value })}
-            >
-              <option value="">Select Category</option>
-              <option value="Technology">Technology</option>
-              <option value="Arts">Arts</option>
-              <option value="Literature">Literature</option>
-              <option value="Media & Film">Media & Film</option>
-              <option value="Performing Arts">Performing Arts</option>
-              <option value="Communication">Communication</option>
-              <option value="Business">Business</option>
-              <option value="Science">Science</option>
-            </select>
-          </div>
+        {/* Spotify-style Cards Grid: Exactly 4 Clubs */}
+        <div>
+          {filteredClubs.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              fontSize: '1.4rem', 
+              color: '#1a1008', 
+              fontWeight: 'bold', 
+              padding: '4rem', 
+              backgroundColor: 'rgba(255,255,255,0.8)', 
+              border: '2px solid #1a1008' 
+            }}>
+              No clubs found matching "{searchTerm}".
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: '2rem',
+              width: '100%'
+            }}>
+              {filteredClubs.map((club) => {
+                const IconComponent = club.icon || BookOpen;
+                
+                return (
+                  <Link to={`/clubs/${club.slug}`} key={club.id} style={{ textDecoration: 'none' }}>
+                    <div 
+                      style={{ 
+                        background: club.gradient, 
+                        borderRadius: '0px', 
+                        padding: '2rem 1.8rem', 
+                        height: '280px', 
+                        position: 'relative', 
+                        overflow: 'hidden', 
+                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 
+                        cursor: 'pointer', 
+                        boxShadow: '0 12px 24px rgba(0,0,0,0.22)', 
+                        border: '2px solid rgba(255,255,255,0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}
+                      onMouseEnter={(e) => { 
+                        e.currentTarget.style.transform = 'translateY(-12px)'; 
+                        e.currentTarget.style.boxShadow = '0 24px 45px rgba(26, 16, 8, 0.45)'; 
+                        e.currentTarget.style.borderColor = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => { 
+                        e.currentTarget.style.transform = 'translateY(0)'; 
+                        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.22)'; 
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                      }}
+                    >
+                      {/* Radial Sheen overlay */}
+                      <div style={{
+                        position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 60%)',
+                        opacity: 0.8, pointerEvents: 'none'
+                      }} />
 
-          <div className="form-group">
-            <label className="form-label">Brief Description *</label>
-            <textarea
-              required
-              rows={3}
-              className="form-textarea"
-              value={reqForm.description}
-              onChange={(e) => setReqForm({ ...reqForm, description: e.target.value })}
-              placeholder="What is this club about and who should join?"
-            />
-          </div>
+                      {/* Card Content Top */}
+                      <div style={{ position: 'relative', zIndex: 2 }}>
+                        <h3 style={{ 
+                          fontFamily: 'Cinzel, serif', 
+                          fontSize: '1.9rem', 
+                          fontWeight: '700', 
+                          margin: 0, 
+                          lineHeight: '1.2',
+                          textShadow: '2px 2px 8px rgba(0,0,0,0.6)',
+                          color: '#ffffff'
+                        }}>
+                          {club.name}
+                        </h3>
+                        
+                        <p style={{
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '0.9rem',
+                          marginTop: '0.8rem',
+                          lineHeight: '1.4',
+                          textShadow: '1px 1px 4px rgba(0,0,0,0.5)'
+                        }}>
+                          {club.tagline}
+                        </p>
+                      </div>
 
-          <div className="form-group">
-            <label className="form-label">Objective & Campus Value</label>
-            <textarea
-              rows={2}
-              className="form-textarea"
-              value={reqForm.purpose}
-              onChange={(e) => setReqForm({ ...reqForm, purpose: e.target.value })}
-              placeholder="Explain how this benefits Amrita students..."
-            />
-          </div>
+                      {/* Card Content Bottom */}
+                      <div style={{ position: 'relative', zIndex: 2 }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                          color: '#ffffff',
+                          fontFamily: 'Cinzel, serif',
+                          fontWeight: 'bold',
+                          fontSize: '0.85rem',
+                          padding: '0.4rem 0.8rem',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)'
+                        }}>
+                          Join Guild <ChevronRight size={14} />
+                        </span>
+                      </div>
+                      
+                      {/* Giant Spotify-style Icon Watermark in bottom corner */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        bottom: '-25px', 
+                        right: '-25px', 
+                        transform: 'rotate(25deg)',
+                        zIndex: 1,
+                        opacity: 0.3
+                      }}>
+                        <IconComponent size={150} color="#ffffff" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit Proposal'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      </div>
     </div>
   );
 }
