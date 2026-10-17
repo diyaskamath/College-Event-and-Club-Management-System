@@ -76,7 +76,7 @@ CECMS/
 
 
 1. **Diya S. Kamath** — [@diyaskamath](https://github.com/diyaskamath)
-2. **[Member 2 Name]** — [@Sanmathi19](https://github.com/Sanmathi19)
+2. **Sanmathi Katikala** — [@Sanmathi19](https://github.com/Sanmathi19)
 3. **Suryaa Balamurugan** — [@suryaabalamurugan0-hub](https://github.com/suryaabalamurugan0-hub)
 
 
