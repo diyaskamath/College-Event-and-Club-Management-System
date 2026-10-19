@@ -26,7 +26,7 @@ function emailProviderName() {
   const p = config.email.provider;
   if (p === 'smtp' && config.email.smtp.host && config.email.from) return 'smtp';
   if (p === 'graph' && config.email.graph.tenantId && config.email.graph.clientId && config.email.graph.clientSecret && config.email.graph.senderUser) return 'graph';
-  if (config.devLogOtpToConsole) return 'console';
+  if (config.devLogOtpToConsole && !config.isProd) return 'console';
   return 'none';
 }
 
@@ -34,7 +34,7 @@ function smsProviderName() {
   if (config.isTest) return testMode === 'memory' ? 'memory' : 'none';
   const t = config.sms.twilio;
   if (config.sms.provider === 'twilio' && t.accountSid && t.authToken && (t.from || t.messagingServiceSid)) return 'twilio';
-  if (config.devLogOtpToConsole) return 'console';
+  if (config.devLogOtpToConsole && !config.isProd) return 'console';
   return 'none';
 }
 
@@ -98,7 +98,10 @@ async function sendEmail(msg) {
         outbox.push({ channel: 'email', to: msg.to, subject: msg.subject, text: msg.text });
         return { provider };
       case 'console':
-        console.log(`[DEV ONLY - NOT DELIVERED] email to ${msg.to}: ${msg.subject}\n${msg.text}`);
+        if (config.isProd) throw notConfigured('email');
+        if (config.devLogOtpToConsole) {
+          console.log(`[DEV DIAGNOSTIC] email delivery simulated for ${msg.to}`);
+        }
         return { provider };
       case 'smtp':
         await getSmtp().sendMail({ from: config.email.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
@@ -142,7 +145,10 @@ async function sendSms(msg) {
         outbox.push({ channel: 'sms', to: msg.to, text: msg.text });
         return { provider };
       case 'console':
-        console.log(`[DEV ONLY - NOT DELIVERED] sms to ${msg.to}: ${msg.text}`);
+        if (config.isProd) throw notConfigured('sms');
+        if (config.devLogOtpToConsole) {
+          console.log(`[DEV DIAGNOSTIC] sms delivery simulated for ${msg.to}`);
+        }
         return { provider };
       case 'twilio': {
         const t = config.sms.twilio;

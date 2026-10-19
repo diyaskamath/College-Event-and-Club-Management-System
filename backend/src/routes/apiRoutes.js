@@ -6,6 +6,7 @@ const { requireAuth, optionalAuth, requireRole } = require('../middleware/auth')
 const catalog = require('../controllers/catalogController');
 const me = require('../controllers/meController');
 const admin = require('../controllers/adminController');
+const portal = require('../controllers/portalController');
 
 const router = express.Router();
 const staff = requireRole('coordinator', 'admin');
@@ -87,6 +88,30 @@ adminRouter.put('/settings', validate(v.settings), admin.updateSettings);
 adminRouter.get('/campuses', admin.listCampusesAdmin);
 adminRouter.post('/campuses', validate(v.campusCreate), admin.createCampus);
 adminRouter.patch('/campuses/:id', idv, validate(v.campusUpdate), admin.updateCampus);
+// ---- admin enrolled students tab (admin can see all enrolled students) ---------------------------
+adminRouter.get('/enrolled-students', admin.enrolledStudents);
+adminRouter.post('/clubs/:id/delete', idv, admin.deleteClub);
+adminRouter.delete('/clubs/:id', idv, admin.deleteClub);
+
+// ---- coordinator admin-level data (coordinator sees all: admins, clubs, students, complaints) --------
+router.get('/coordinator/overview', requireAuth, requireRole('coordinator', 'admin'), admin.coordinatorOverview);
+router.post('/coordinator/clubs', requireAuth, requireRole('coordinator', 'admin'), portal.createClubRealtime);
+router.delete('/coordinator/clubs/:id', requireAuth, requireRole('coordinator', 'admin'), idv, portal.deleteClubRealtime);
+router.post('/coordinator/clubs/:id/delete', requireAuth, requireRole('coordinator', 'admin'), idv, portal.deleteClubRealtime);
+
+// ---- announcements (Notice Board) -----------------------------------------------------------------
+router.get('/announcements', optionalAuth, portal.listAnnouncements);
+router.post('/announcements', requireAuth, staff, portal.createAnnouncement);
+
+// ---- complaints (Student grievances & Staff review) -----------------------------------------------
+router.get('/complaints', requireAuth, portal.listComplaints);
+router.post('/complaints', requireAuth, portal.createComplaint);
+router.patch('/complaints/:id', requireAuth, staff, idv, portal.updateComplaint);
+
+// ---- calendar schedule ----------------------------------------------------------------------------
+router.get('/calendar/schedule', optionalAuth, portal.getCalendarSchedule);
+
 router.use('/admin', adminRouter);
 
 module.exports = router;
+

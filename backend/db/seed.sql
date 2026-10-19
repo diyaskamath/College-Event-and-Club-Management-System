@@ -118,37 +118,8 @@ SELECT 'dussehra-and-navaratri-cultural-evening', 'Dussehra and Navaratri Cultur
        TIMESTAMP(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 DAY)), '13:00:00'),
        200, 1, 0, 'published', (SELECT id FROM festival_themes WHERE slug = 'dussehra-navaratri'), 1
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.slug = 'dussehra-and-navaratri-cultural-evening');
-
--- ---- 4 core showcase clubs (Book, Film, Sports, IoT) ------------------------------------------------------------------
-INSERT INTO clubs (slug, name, description, category, campus_id, is_demo, is_active)
-SELECT v.slug, v.name, v.description, v.category, (SELECT id FROM campuses WHERE slug = 'coimbatore'), 1, 1
-FROM (
-  SELECT 'book-club' AS slug, 'The Book Club' AS name, 'A sanctuary for readers, creative writing circles, and intellectual book debriefs.' AS description, 'Literature' AS category
-  UNION ALL SELECT 'film-club', 'Film & Cinema Club', 'Screening cinematic masterpieces, filmmaking workshops, and cinematography critique.', 'Media & Film'
-  UNION ALL SELECT 'sports-club', 'Sports Club', 'Athletics, inter-department tournaments, basketball, cricket, and unstoppable sporting spirit.', 'Sports'
-  UNION ALL SELECT 'iot-club', 'IoT & Robotics Club', 'Hardware hacking, sensor meshes, Arduino and robotics prototyping at the ECE Block.', 'Technology'
-) v
-WHERE NOT EXISTS (SELECT 1 FROM clubs c WHERE c.slug = v.slug);
-
--- ---- 2 showcase festival events (Dussera & Diwali) ---------------------------------------------------------------------
-INSERT INTO events (slug, title, description, kind, category, event_type, organizer_name, campus_id, academic_block, venue, venue_is_placeholder,
-                    starts_at, ends_at, registration_deadline, capacity, waitlist_enabled, requires_approval, status, is_demo)
-SELECT v.slug, v.title, v.description, v.kind, v.category, v.event_type, v.organizer_name, (SELECT id FROM campuses WHERE slug = 'coimbatore'),
-       v.academic_block, v.venue, 0, v.starts_at, v.ends_at, v.registration_deadline, v.capacity, 1, 0, 'published', 1
-FROM (
-  SELECT 'dussera' AS slug, 'Dussera Cultural Night' AS title, 'Sacred Ayudha Puja, classical cultural performances, and traditional pandhal feast for all departments.' AS description,
-         'festival' AS kind, 'Festival' AS category, 'Cultural Evening' AS event_type, 'Campus Cultural Committee' AS organizer_name,
-         'AB2 Ground' AS academic_block, 'AB2 Ground' AS venue,
-         TIMESTAMP('2026-10-20 09:00:00') AS starts_at, TIMESTAMP('2026-10-20 16:00:00') AS ends_at, TIMESTAMP('2026-10-19 23:59:59') AS registration_deadline, 500 AS capacity
-  UNION ALL
-  SELECT 'diwali' AS slug, 'Diwali Lights & Rangoli' AS title, 'Diyas lighting ceremony, vibrant rangoli competitions, eco-crackers, and late-night music & dance.' AS description,
-         'festival' AS kind, 'Festival' AS category, 'Festival Celebration' AS event_type, 'Campus Cultural Committee' AS organizer_name,
-         'Main Campus Pandhal' AS academic_block, 'Main Campus Pandhal' AS venue,
-         TIMESTAMP('2026-11-08 17:00:00') AS starts_at, TIMESTAMP('2026-11-08 23:00:00') AS ends_at, TIMESTAMP('2026-11-07 23:59:59') AS registration_deadline, 600 AS capacity
-) v
-WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.slug = v.slug);
-
 -- ---- default platform settings ------------------------------------------------------------------------------------------------
 INSERT INTO platform_settings (setting_key, setting_value) VALUES ('require_student_login_otp', 'false'), ('reminder_hours', '24')
 ON DUPLICATE KEY UPDATE setting_key = setting_key;
+
 

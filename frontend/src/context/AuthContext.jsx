@@ -22,8 +22,15 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+  // Login supports email (student/coordinator), phone (admin/coordinator), or adminId (admin)
+  const login = async ({ email, phone, adminId, password, role }) => {
+    const payload = { password };
+    if (email) payload.email = email;
+    if (phone) payload.phone = phone;
+    if (adminId) payload.adminId = adminId;
+    if (role) payload.role = role;
+
+    const res = await api.post('/auth/login', payload);
     if (!res.requiresOtp && res.user) {
       setUser(res.user);
     }
@@ -38,8 +45,9 @@ export function AuthProvider({ children }) {
     return res.user;
   };
 
-  const register = async ({ name, email, password, campusId }) => {
-    const res = await api.post('/auth/register', { name, email, password, campusId });
+  // Register supports role-based payloads
+  const register = async (formData) => {
+    const res = await api.post('/auth/register', formData);
     return res;
   };
 

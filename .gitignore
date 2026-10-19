@@ -18,3 +18,5 @@ CECMS.zip
 out.txt
 err.txt
 push-to-github.*
+mysql-data/
+**/mysql-data/

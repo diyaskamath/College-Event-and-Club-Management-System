@@ -233,10 +233,9 @@ export default function HomePage() {
         </Link>
 
         {/* --- HERO ACTION BUTTON --- */}
-        {/* LET'S GET STARTED Button -> navigates to / and scrolls smoothly down to Events/Clubs */}
-        <a
-          href="#explore-section"
-          onClick={scrollToExplore}
+        {/* LET'S GET STARTED Button -> navigates to /dashboard */}
+        <Link
+          to="/dashboard"
           style={{
             position: 'absolute',
             bottom: '24%',
@@ -250,7 +249,7 @@ export default function HomePage() {
           title="Let's Get Started"
         >
           Let's Get Started
-        </a>
+        </Link>
 
         {/* --- BOTTOM NAVIGATION BAR --- */}
         {/* Bottom Events Button */}
@@ -289,9 +288,9 @@ export default function HomePage() {
           Clubs
         </Link>
 
-        {/* Bottom Explore Button -> /campus-life */}
+        {/* Bottom Explore Button -> /dashboard */}
         <Link
-          to="/campus-life"
+          to="/dashboard"
           style={{
             position: 'absolute',
             bottom: '7.5%',
@@ -302,7 +301,7 @@ export default function HomePage() {
             cursor: 'pointer',
             zIndex: 10
           }}
-          title="Explore"
+          title="Explore Dashboard"
         >
           Explore
         </Link>

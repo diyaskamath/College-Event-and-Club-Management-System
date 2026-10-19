@@ -7,6 +7,7 @@ const mapUser = (r) => ({
   name: r.name,
   email: r.email,
   phone: r.phone || null,
+  adminId: r.admin_id || null,
   role: r.role,
   status: r.status,
   campusId: r.campus_id,

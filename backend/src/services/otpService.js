@@ -39,19 +39,23 @@ async function deliverCode({ channel, destination, code, purpose }) {
   return delivery.sendSms({ to: destination, text: `Amrita Connect code: ${code}. Valid ${minutes} min. Do not share it.` });
 }
 
-const toPublic = (c, providerInfo) => ({
+const toPublic = (c) => ({
   challengeId: c.id,
   channel: c.channel,
   destination: maskDestination(c.channel, c.destination),
+  destinationMasked: maskDestination(c.channel, c.destination),
   expiresAt: c.expires_at,
   resendAvailableAt: new Date(new Date(c.last_sent_at).getTime() + config.otp.resendCooldownSeconds * 1000),
-  ...(providerInfo && providerInfo.provider === 'console' ? { devNotice: 'DEV MODE: the code was printed to the server console. It was NOT delivered to the recipient.' } : {}),
 });
 
 /** Create a challenge and deliver the code. Throws (and stores nothing) if delivery fails. */
 async function issue({ userId, purpose, channel, destination }) {
   const provider = channel === 'email' ? delivery.emailProviderName() : delivery.smsProviderName();
-  if (provider === 'none') await (channel === 'email' ? delivery.sendEmail({ to: destination, subject: '', text: '' }) : delivery.sendSms({ to: destination, text: '' })); // throws 503
+  if (provider === 'none') {
+    await (channel === 'email'
+      ? delivery.sendEmail({ to: destination, subject: '', text: '' })
+      : delivery.sendSms({ to: destination, text: '' })); // throws 503 delivery_not_configured
+  }
 
   const recent = await query('SELECT COUNT(*) c FROM otp_challenges WHERE destination=? AND created_at > (UTC_TIMESTAMP() - INTERVAL 1 HOUR)', [destination]);
   if (recent[0].c >= config.otp.maxPerDestinationPerHour) {
@@ -63,12 +67,13 @@ async function issue({ userId, purpose, channel, destination }) {
   const now = new Date();
   const expires = new Date(now.getTime() + config.otp.ttlMinutes * 60000);
 
-  // Only one live challenge per user+purpose.
+  // Invalidate previous live challenge for same user+purpose
   await query('UPDATE otp_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose=? AND consumed_at IS NULL', [userId, purpose]);
   await query(
     'INSERT INTO otp_challenges (id,user_id,purpose,channel,destination,code_hash,max_attempts,expires_at,last_sent_at) VALUES (?,?,?,?,?,?,?,?,?)',
     [id, userId, purpose, channel, destination, hashCode(id, code), config.otp.maxAttempts, expires, now],
   );
+
   let info;
   try {
     info = await deliverCode({ channel, destination, code, purpose });
@@ -77,6 +82,11 @@ async function issue({ userId, purpose, channel, destination }) {
     throw err;
   }
   return toPublic({ id, channel, destination, expires_at: expires, last_sent_at: now }, info);
+}
+
+/** Coordinator SMS issue helper for backwards compatibility */
+async function issueCoordinatorBoth({ userId, purpose, email, phone }) {
+  return issue({ userId, purpose, channel: 'sms', destination: phone });
 }
 
 /**
@@ -147,4 +157,4 @@ const decoy = (channel, destination) => ({
   resendAvailableAt: new Date(Date.now() + config.otp.resendCooldownSeconds * 1000),
 });
 
-module.exports = { issue, verify, resend, decoy, maskDestination };
+module.exports = { issue, issueCoordinatorBoth, verify, resend, decoy, maskDestination };

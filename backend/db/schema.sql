@@ -18,14 +18,16 @@ CREATE TABLE IF NOT EXISTS campuses (
 CREATE TABLE IF NOT EXISTS users (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   name            VARCHAR(120) NOT NULL,
-  email           VARCHAR(190) NOT NULL,
-  phone           VARCHAR(20)  NULL,                       -- E.164, required for coordinator/admin
+  email           VARCHAR(190) NULL,
+  phone           VARCHAR(25)  NULL,                       -- E.164, required for coordinator/admin
+  admin_id        VARCHAR(60)  NULL,                       -- Admin unique identifier
   password_hash   VARCHAR(100) NOT NULL,
   role            ENUM('student','coordinator','admin') NOT NULL DEFAULT 'student',
   status          ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
   email_verified_at DATETIME   NULL,
   campus_id       INT UNSIGNED NULL,
   department      VARCHAR(120) NULL,
+  roll_no         VARCHAR(60)  NULL,
   year_of_study   TINYINT UNSIGNED NULL,
   bio             VARCHAR(500) NULL,
   last_login_at   DATETIME     NULL,
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_admin_id (admin_id),
   KEY idx_users_role (role),
   KEY idx_users_phone (phone),
   CONSTRAINT fk_users_campus FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL
@@ -267,13 +270,35 @@ CREATE TABLE IF NOT EXISTS announcements (
   author_id   INT UNSIGNED NULL,
   title       VARCHAR(200) NOT NULL,
   body        TEXT         NOT NULL,
+  source_tag  VARCHAR(50)  NOT NULL DEFAULT 'Coordination', -- 'Prof', 'HOD', 'Coordination', 'Main Office'
+  target_tag  VARCHAR(50)  NOT NULL DEFAULT 'All Branches', -- 'All Branches', 'ECE', 'CSE', 'AI', 'CCE', 'EEE', 'Mech', 'Aerospace'
   created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_ann_club (club_id, created_at),
   KEY idx_ann_event (event_id, created_at),
+  KEY idx_ann_target (target_tag),
   CONSTRAINT fk_ann_club FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE,
   CONSTRAINT fk_ann_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   CONSTRAINT fk_ann_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS complaints (
+  id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id        INT UNSIGNED NOT NULL,
+  title          VARCHAR(200) NOT NULL,
+  description    TEXT         NOT NULL,
+  category       VARCHAR(60)  NOT NULL DEFAULT 'Academic', -- 'Academic', 'Hostel', 'Canteen', 'Infrastructure', 'Other'
+  branch         VARCHAR(60)  NOT NULL DEFAULT 'All Branches',
+  status         ENUM('Pending','In Progress','Resolved') NOT NULL DEFAULT 'Pending',
+  admin_response VARCHAR(500) NULL,
+  resolved_by    INT UNSIGNED NULL,
+  created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_complaints_user (user_id),
+  KEY idx_complaints_status (status),
+  CONSTRAINT fk_complaints_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_complaints_admin FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS notifications (

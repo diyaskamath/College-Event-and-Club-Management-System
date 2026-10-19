@@ -18,6 +18,8 @@ import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OtpVerificationPage from './pages/OtpVerificationPage';
+import DashboardPage from './pages/DashboardPage';
+import CalendarPage from './pages/CalendarPage';
 import StudentDashboard from './pages/StudentDashboard';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -45,12 +47,15 @@ export default function App() {
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/verify-otp" element={<OtpVerificationPage />} />
 
-                  {/* Protected Student Dashboard */}
+                  {/* Calendar - accessible to anyone authenticated */}
+                  <Route path="/calendar" element={<CalendarPage />} />
+
+                  {/* Protected Unified Dashboard (all roles) */}
                   <Route
                     path="/dashboard"
                     element={
                       <ProtectedRoute allowedRoles={['student', 'coordinator', 'admin']}>
-                        <StudentDashboard />
+                        <DashboardPage />
                       </ProtectedRoute>
                     }
                   />
@@ -71,6 +76,16 @@ export default function App() {
                     element={
                       <ProtectedRoute allowedRoles={['admin']}>
                         <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Legacy /student route -> same as /dashboard */}
+                  <Route
+                    path="/student"
+                    element={
+                      <ProtectedRoute allowedRoles={['student', 'coordinator', 'admin']}>
+                        <StudentDashboard />
                       </ProtectedRoute>
                     }
                   />

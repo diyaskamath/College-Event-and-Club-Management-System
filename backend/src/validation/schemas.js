@@ -9,8 +9,44 @@ const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').refin
 const intQ = (def) => z.coerce.number().int().positive().default(def);
 
 // ---- auth -------------------------------------------------------------------------------------
-const register = z.object({ name: z.string().trim().min(2).max(120), email: emailSchema, password: passwordSchema, campusId: z.coerce.number().int().positive().optional() });
-const login = z.object({ email: emailSchema, password: z.string().min(1).max(200) });
+const register = z
+  .object({
+    role: z.enum(['student', 'coordinator', 'admin']).default('student'),
+    // Student fields
+    name: z.string().trim().min(2).max(120).optional(),
+    email: emailSchema.optional(),
+    password: passwordSchema,
+    campusId: z.coerce.number().int().positive().optional(),
+    // Admin fields
+    adminId: z.string().trim().min(2).max(60).optional(),
+    // Coordinator / Admin phone
+    phone: phoneSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === 'student') {
+      if (!data.name || data.name.trim().length < 2) ctx.addIssue({ code: 'custom', path: ['name'], message: 'Full name is required for student registration' });
+      if (!data.email) ctx.addIssue({ code: 'custom', path: ['email'], message: 'Outlook email is required for student registration' });
+    } else if (data.role === 'admin') {
+      if (!data.phone) ctx.addIssue({ code: 'custom', path: ['phone'], message: 'Phone number is required for admin registration' });
+      if (!data.adminId) ctx.addIssue({ code: 'custom', path: ['adminId'], message: 'Admin ID is required for admin registration' });
+    } else if (data.role === 'coordinator') {
+      if (!data.phone) ctx.addIssue({ code: 'custom', path: ['phone'], message: 'Phone number is required for coordinator registration' });
+      if (!data.email) ctx.addIssue({ code: 'custom', path: ['email'], message: 'Outlook email is required for coordinator registration' });
+    }
+  });
+
+const login = z.object({
+  email: emailSchema.optional(),
+  phone: phoneSchema.optional(),
+  adminId: z.string().trim().min(1).max(60).optional(),
+  password: z.string().min(1).max(200),
+  role: z.enum(['student', 'coordinator', 'admin']).optional(),
+}).superRefine((data, ctx) => {
+  if (!data.email && !data.phone && !data.adminId) {
+    ctx.addIssue({ code: 'custom', path: ['email'], message: 'Email, phone, or admin ID is required' });
+  }
+});
+
 const otpVerify = z.object({ challengeId: z.string().uuid('Invalid verification session'), code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code') });
 const otpResend = z.object({ challengeId: z.string().uuid() });
 

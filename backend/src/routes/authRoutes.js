@@ -11,10 +11,14 @@ const router = express.Router();
 const windowMs = config.rateLimit.windowMinutes * 60 * 1000;
 const limitMsg = { error: { code: 'rate_limited', message: 'Too many attempts. Please wait a few minutes and try again.' } };
 const authLimiter = rateLimit({ windowMs, limit: config.rateLimit.auth, standardHeaders: true, legacyHeaders: false, message: limitMsg });
-// Credential guessing is limited per IP + email so one attacker cannot lock out unrelated accounts.
+// Credential guessing is limited per IP + identifier so one attacker cannot lock out unrelated accounts.
 const loginLimiter = rateLimit({
   windowMs, limit: Math.max(10, Math.floor(config.rateLimit.auth / 2)), standardHeaders: true, legacyHeaders: false, message: limitMsg,
-  keyGenerator: (req) => `${req.ip}|${String((req.body && req.body.email) || '').toLowerCase()}`,
+  keyGenerator: (req) => {
+    const b = req.body || {};
+    const id = String(b.email || b.phone || b.adminId || '').toLowerCase();
+    return `${req.ip}|${id}`;
+  },
 });
 // OTP guessing is limited per IP + challenge (attempt counter in DB is the hard limit).
 const otpLimiter = rateLimit({

@@ -56,7 +56,7 @@ const config = {
   otp: {
     ttlMinutes: int(env.OTP_TTL_MINUTES, 5),
     maxAttempts: int(env.OTP_MAX_ATTEMPTS, 5),
-    resendCooldownSeconds: int(env.OTP_RESEND_COOLDOWN_SECONDS, isTest ? 1 : 60),
+    resendCooldownSeconds: isTest ? 1 : int(env.OTP_RESEND_COOLDOWN_SECONDS, 60),
     maxResends: int(env.OTP_MAX_RESENDS, 5),
     maxPerDestinationPerHour: int(env.OTP_MAX_PER_DESTINATION_PER_HOUR, 8),
   },

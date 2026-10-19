@@ -102,21 +102,37 @@ async function join(user, clubId) {
       dedupeKey: `club_join:${membershipId}:${joinCount}`,
     });
 
-    // Assigned coordinators only (respecting their preferences)
-    const coords = await tx.q("SELECT u.id FROM coordinator_assignments a JOIN users u ON u.id=a.user_id WHERE a.club_id=? AND u.status='active'", [clubId]);
+    // Real-time notification to ALL active admins
+    const admins = await tx.q("SELECT u.id FROM users u WHERE u.role='admin' AND u.status='active'");
+    for (const a of admins) {
+      await notifications.notify(tx, {
+        userId: a.id,
+        type: 'club_new_member',
+        category: 'admin_activity',
+        title: `Notification: Club Registration`,
+        body: `Notification: A student from ${user.department || 'Unknown Dept'} has registered for ${club.name}. Student: ${user.name} (${user.email || 'No email'})`,
+        link: '/admin',
+        dedupeKey: `club_join_admin:${membershipId}:${joinCount}:${a.id}`,
+      });
+    }
+
+    // Real-time notification to ALL active coordinators (including assigned ones)
+    const coords = await tx.q("SELECT u.id FROM users u WHERE u.role='coordinator' AND u.status='active'");
     for (const c of coords) {
       await notifications.notify(tx, {
         userId: c.id,
         type: 'club_new_member',
         category: 'club_activity',
-        title: `New member in ${club.name}`,
-        body: `${user.name} joined ${club.name}.`,
+        title: `Notification: Club Registration`,
+        body: `Notification: A student from ${user.department || 'Unknown Dept'} has registered for ${club.name}. Student: ${user.name} (${user.email || 'No email'})`,
         link: '/coordinator',
-        dedupeKey: `club_new_member:${membershipId}:${joinCount}:${c.id}`,
+        dedupeKey: `club_join_coord:${membershipId}:${joinCount}:${c.id}`,
       });
     }
+
     const count = (await tx.q("SELECT COUNT(*) c FROM club_memberships WHERE club_id=? AND status='active'", [clubId]))[0].c;
     return { joined: true, memberCount: count };
+
   });
 }
 
