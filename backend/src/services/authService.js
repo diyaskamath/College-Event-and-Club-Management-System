@@ -224,8 +224,12 @@ async function registerCoordinator({ phone, email, password }, req) {
 // ---- UNIFIED REGISTER DISPATCHER ----------------------------------------------------------------
 async function register(body, req) {
   const role = body.role || 'student';
-  if (role === 'admin') return registerAdmin(body, req);
-  if (role === 'coordinator') return registerCoordinator(body, req);
+  if (role === 'admin' || role === 'coordinator') {
+    throw forbidden(
+      'Administrator and Coordinator accounts cannot be self-registered. They must be provisioned by a platform administrator or via backend account seeding.',
+      'role_self_registration_forbidden'
+    );
+  }
   return registerStudent(body, req);
 }
 

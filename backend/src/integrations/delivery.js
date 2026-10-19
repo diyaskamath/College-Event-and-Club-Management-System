@@ -24,9 +24,9 @@ const setTestMode = (mode) => {
 function emailProviderName() {
   if (config.isTest) return testMode === 'memory' ? 'memory' : 'none';
   const p = config.email.provider;
-  if (p === 'smtp' && config.email.smtp.host && config.email.from) return 'smtp';
+  const fromAddr = config.email.from || (config.email.smtp && config.email.smtp.user) || (config.email.graph && config.email.graph.senderUser);
+  if (p === 'smtp' && config.email.smtp.host && fromAddr) return 'smtp';
   if (p === 'graph' && config.email.graph.tenantId && config.email.graph.clientId && config.email.graph.clientSecret && config.email.graph.senderUser) return 'graph';
-  if (config.devLogOtpToConsole && !config.isProd) return 'console';
   return 'none';
 }
 
@@ -34,7 +34,6 @@ function smsProviderName() {
   if (config.isTest) return testMode === 'memory' ? 'memory' : 'none';
   const t = config.sms.twilio;
   if (config.sms.provider === 'twilio' && t.accountSid && t.authToken && (t.from || t.messagingServiceSid)) return 'twilio';
-  if (config.devLogOtpToConsole && !config.isProd) return 'console';
   return 'none';
 }
 
@@ -47,8 +46,8 @@ const notConfigured = (channel) =>
       : 'SMS delivery is not configured on this server, so no verification code was sent. Ask the administrator to configure SMS_PROVIDER.',
   );
 
-const deliveryFailed = (channel) =>
-  new AppError(502, 'delivery_failed', `We could not deliver the message via ${channel}. Nothing was sent; please try again shortly.`);
+const deliveryFailed = (channel, detail = '') =>
+  new AppError(502, 'delivery_failed', `We could not deliver the message via ${channel}${detail ? ` (${detail})` : ''}. Nothing was sent; please try again shortly.`);
 
 let smtpTransport = null;
 function getSmtp() {
@@ -60,6 +59,9 @@ function getSmtp() {
       secure: s.secure,
       auth: s.user ? { user: s.user, pass: s.pass } : undefined,
       requireTLS: !s.secure, // Office 365 requires STARTTLS on 587
+      tls: {
+        minVersion: 'TLSv1.2',
+      },
     });
   }
   return smtpTransport;
@@ -103,9 +105,11 @@ async function sendEmail(msg) {
           console.log(`[DEV DIAGNOSTIC] email delivery simulated for ${msg.to}`);
         }
         return { provider };
-      case 'smtp':
-        await getSmtp().sendMail({ from: config.email.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+      case 'smtp': {
+        const fromAddress = config.email.from || (config.email.smtp.user ? `Amrita Connect <${config.email.smtp.user}>` : 'Amrita Connect <no-reply@cb.students.amrita.edu>');
+        await getSmtp().sendMail({ from: fromAddress, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
         return { provider };
+      }
       case 'graph': {
         const token = await getGraphToken();
         const res = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.email.graph.senderUser)}/sendMail`, {
@@ -129,7 +133,8 @@ async function sendEmail(msg) {
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error(`[delivery:email:${provider}] failed:`, err.message);
-    throw deliveryFailed('email');
+    const detail = err.code ? `${err.code}: ${err.message}` : err.message;
+    throw deliveryFailed('email', detail);
   }
 }
 
@@ -172,7 +177,8 @@ async function sendSms(msg) {
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error(`[delivery:sms:${provider}] failed:`, err.message);
-    throw deliveryFailed('sms');
+    const detail = err.code ? `${err.code}: ${err.message}` : err.message;
+    throw deliveryFailed('sms', detail);
   }
 }
 
