@@ -11,11 +11,19 @@ const config = require('../src/config');
 
 async function main() {
   const { host, port, user, password, database } = config.db;
-  if (!/^[A-Za-z0-9_]+$/.test(database)) throw new Error('DB_NAME may only contain letters, numbers and underscores.');
-  const conn = await mysql.createConnection({ host, port, user, password, multipleStatements: true, charset: 'utf8mb4', timezone: 'Z' });
+  const connConfig = { host, port, user, password, ssl: config.db.ssl, multipleStatements: true, charset: 'utf8mb4', timezone: 'Z' };
+  let conn;
   try {
-    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    conn = await mysql.createConnection(connConfig);
+    try {
+      await conn.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    } catch (err) {
+      console.log(`Note: CREATE DATABASE skipped (${err.message}). Proceeding.`);
+    }
     await conn.query(`USE \`${database}\``);
+  } catch (err) {
+    conn = await mysql.createConnection({ ...connConfig, database });
+  }
     await conn.query(fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), 'utf8'));
     console.log(`Schema applied to "${database}".`);
     if (!process.argv.includes('--no-seed')) {

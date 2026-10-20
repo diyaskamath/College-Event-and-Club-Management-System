@@ -37,6 +37,19 @@ function createApp() {
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date().toISOString(), delivery: delivery.status() }));
   app.use('/api/auth', authRoutes);
   app.use('/api', apiRoutes);
+
+  // Serve frontend build if present (production / full-stack deployment)
+  const path = require('path');
+  const fs = require('fs');
+  const distPath = path.resolve(__dirname, '../../frontend/dist');
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) return next();
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
   app.use(notFoundHandler);
   app.use(errorHandler);
   return app;

@@ -28,6 +28,22 @@ if (!jwtSecret || jwtSecret.length < 32) {
   }
 }
 
+let dbUrlParsed = {};
+if (env.DATABASE_URL || env.MYSQL_URL) {
+  try {
+    const u = new URL(env.DATABASE_URL || env.MYSQL_URL);
+    dbUrlParsed = {
+      host: u.hostname,
+      port: u.port ? parseInt(u.port, 10) : 3306,
+      user: decodeURIComponent(u.username),
+      password: decodeURIComponent(u.password),
+      database: u.pathname.replace(/^\//, ''),
+    };
+  } catch (_) {}
+}
+
+const dbSsl = bool(env.DB_SSL, false) || (env.DATABASE_URL && env.DATABASE_URL.includes('ssl=')) || false;
+
 const config = {
   nodeEnv,
   isProd,
@@ -37,12 +53,13 @@ const config = {
   trustProxy: bool(env.TRUST_PROXY, false),
 
   db: {
-    host: env.DB_HOST || '127.0.0.1',
-    port: int(env.DB_PORT, 3306),
-    user: env.DB_USER || 'root',
-    password: env.DB_PASSWORD || '',
-    database: env.DB_NAME || 'amrita_connect',
+    host: env.DB_HOST || dbUrlParsed.host || '127.0.0.1',
+    port: int(env.DB_PORT, dbUrlParsed.port || 3306),
+    user: env.DB_USER || dbUrlParsed.user || 'root',
+    password: env.DB_PASSWORD !== undefined ? env.DB_PASSWORD : (dbUrlParsed.password || ''),
+    database: env.DB_NAME || dbUrlParsed.database || 'amrita_connect',
     connectionLimit: int(env.DB_POOL_SIZE, 10),
+    ssl: dbSsl ? { rejectUnauthorized: bool(env.DB_SSL_REJECT_UNAUTHORIZED, false) } : undefined,
   },
 
   auth: {

@@ -9,8 +9,11 @@ class ApiError extends Error {
   }
 }
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 async function request(path, options = {}) {
-  const url = path.startsWith('/api') ? path : `/api${path.startsWith('/') ? path : `/${path}`}`;
+  const cleanPath = path.startsWith('/api') ? path : `/api${path.startsWith('/') ? path : `/${path}`}`;
+  const url = `${API_BASE}${cleanPath}`;
   
   const headers = {
     'Accept': 'application/json',
